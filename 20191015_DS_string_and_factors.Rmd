@@ -1,0 +1,169 @@
+---
+title: "strings_and_factors"
+author: "Yuqi Miao"
+date: "10/15/2019"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(rvest)
+```
+
+```{r}
+library(p8105.datasets)
+```
+
+
+# Strings and regex
+
+```{r}
+string_vec = c("my", "name", "is", "Yuqi")
+str_detect(string_vec, "Yuqi")
+str_detect(string_vec, "Yu")
+### ??
+str_replace(string_vec, "Yuqi", "YuQi")
+str_replace(string_vec, "Y", "Yuqi")
+
+```
+
+```{r}
+string_vec = c(
+  "i think we all rule for participating",
+  "i think i have been caught",
+  "i think this will be quite fun actually",
+  "it will be fun, i think"
+  )
+
+str_detect(string_vec, "^i think") ## ^ start with
+
+str_detect(string_vec, "i think$") ## $ end with
+
+string_vec = c(
+  "Y'all remember Pres. HW Bush?",
+  "I saw a green bush",
+  "BBQ and Bushwalking at Molonglo Gorge",
+  "BUSH -- LIVE IN CONCERT!!"
+  )
+str_detect(string_vec,"[Bb]ush") ## [ ] within are all okay
+```
+
+
+```{r}
+string_vec = c(
+  '7th inning stretch',
+  '1st half soon to begin. Texas won the toss.',
+  'she is 5 feet 4 inches tall',
+  '3AM - cant sleep :('
+  )
+str_detect(string_vec, "^[0-9][a-zA-Z]") 
+```
+
+
+```{r}
+string_vec = c(
+  'Its 7:11 in the evening',
+  'want to go to 7-11?',
+  'my flight is AA711',
+  'NetBios: scanning ip 203.167.114.66'
+  )
+str_detect(string_vec, "7.11") 
+```
+
+
+```{r}
+string_vec = c(
+  'The CI is \ [2, 5]',
+  ':-]',
+  ':-[',
+  'I found the answer on pages [6-7]'
+  )
+str_detect(string_vec, "\\[")
+```
+
+```{r}
+pulse_data = 
+  haven::read_sas("public_pulse_data.sas7bdat") %>%
+  janitor::clean_names() %>%
+  pivot_longer(
+    bdi_score_bl:bdi_score_12m,
+    names_to = "visit", 
+    names_prefix = "bdi_score_",
+    values_to = "bdi") %>%
+  select(id, visit, everything()) %>%
+  mutate(
+    visit = str_replace(visit, "bl", "00m"),
+    visit = fct_relevel(visit, str_c(c("00", "01", "06", "12"), "m"))) %>% ## str_c 
+  arrange(id, visit)
+print(pulse_data, n = 12)
+
+```
+
+
+
+
+```{r}
+nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
+table_marj = 
+  read_html(nsduh_url) %>% 
+  html_nodes(css = "table") %>% 
+  .[[1]] %>%
+  html_table() %>%
+  slice(-1) %>%
+  as_tibble()
+```
+```{r}
+data_marj = 
+    table_marj %>%
+    select(-contains("P Value")) %>%
+    pivot_longer(
+        -State,
+        names_to = "age_year", 
+        values_to = "percent") %>% 
+    separate(age_year, into = c("age", "year"), sep = "\\(") %>%
+    mutate(
+        year = str_replace(year, "\\)", ""),
+        percent = str_replace(percent, "[a-c]$", ""),
+        percent = as.numeric(percent)) %>%
+    filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+
+```
+
+## Skip in class
+```{r}
+url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
+urls = str_c(url_base, 1:5)
+read_html(urls[1]) %>% 
+  html_nodes("#cm_cr-review_list .review-title") %>%
+  html_text()
+
+read_html(urls[2]) %>% 
+  html_nodes("#cm_cr-review_list .review-title") %>%
+  html_text()
+
+
+```
+
+
+
+
+# Factor
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
