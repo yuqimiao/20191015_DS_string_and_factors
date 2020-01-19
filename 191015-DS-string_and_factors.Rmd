@@ -10,10 +10,6 @@ library(tidyverse)
 library(rvest)
 ```
 
-```{r}
-library(p8105.datasets)
-```
-
 
 # Strings and regex
 
@@ -93,8 +89,12 @@ pulse_data =
   select(id, visit, everything()) %>%
   mutate(
     visit = str_replace(visit, "bl", "00m"),
-    visit = fct_relevel(visit, str_c(c("00", "01", "06", "12"), "m"))) %>% ## str_c 
+    visit = fct_relevel(visit, str_c(c("00", "01", "06", "12"), "m")),
+    age = round(age,1),
+    bdi = round(bdi,0)
+    ) %>% ## str_c 
   arrange(id, visit)
+
 print(pulse_data, n = 12)
 
 ```
@@ -105,31 +105,39 @@ print(pulse_data, n = 12)
 ```{r}
 nsduh_url = "http://samhda.s3-us-gov-west-1.amazonaws.com/s3fs-public/field-uploads/2k15StateFiles/NSDUHsaeShortTermCHG2015.htm"
 table_marj = 
-  read_html(nsduh_url) %>% 
+  read_html(nsduh_url) %>%
   html_nodes(css = "table") %>% 
   .[[1]] %>%
   html_table() %>%
   slice(-1) %>%
-  as_tibble()
-```
-```{r}
-data_marj = 
-    table_marj %>%
-    select(-contains("P Value")) %>%
-    pivot_longer(
-        -State,
-        names_to = "age_year", 
-        values_to = "percent") %>% 
-    separate(age_year, into = c("age", "year"), sep = "\\(") %>%
-    mutate(
-        year = str_replace(year, "\\)", ""),
-        percent = str_replace(percent, "[a-c]$", ""),
-        percent = as.numeric(percent)) %>%
-    filter(!(State %in% c("Total U.S.", "Northeast", "Midwest", "South", "West")))
+  as_tibble() %>% 
+  select(-contains("P Value")) %>% 
+  pivot_longer(
+    cols = -State,
+    names_to = "category",
+    values_to = "drug_use"
+  ) %>% 
+  separate(col = category, into = c("age", "year") ,sep = "\\(" ) %>% 
+  mutate(
+    year = str_replace(year,"\\)",""), ## use replace to remove unuseful characters
+    drug_use = str_replace(drug_use, "[a-z]$",""),## remember to specify the location of the goal characters
+    drug_use = as.numeric(drug_use)
+  )
 
+table_marj %>% 
+  filter(age %in% c("18-25", "12-17","26+") )%>% 
+  mutate(state = fct_reorder(State, drug_use)) %>% 
+  ggplot(aes(x = state, y = drug_use,color = year,group = year )) +
+    geom_line() +
+    facet_grid(.~age)+
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  
+  
+  
 ```
 
-## Skip in class
+
+## Skip in class troublr nodes
 ```{r}
 url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewerType=avp_only_reviews&sortBy=recent&pageNumber="
 urls = str_c(url_base, 1:5)
@@ -144,6 +152,18 @@ read_html(urls[2]) %>%
 
 ```
 
+```{r}
+##url_base = "https://www.amazon.com/product-reviews/B00005JNBQ/ref=cm_cr_arp_d_viewopt_rvwer?ie=UTF8&reviewer##Type=avp_only_reviews&sortBy=recent&pageNumber="
+##url_review = str_c(url_base, 1:5)
+##review = vector("list", length = 5)
+##for (i in 1:5) {
+##  review[i] = 
+##    read_html(url_review[i]) %>% 
+##    html_nodes("#cm_cr-review_list .review-title") %>% 
+##    html_text()
+##}
+
+```
 
 
 
@@ -187,6 +207,8 @@ weather_df %>%
   mutate(name = forcats::fct_relevel(name, c("Waikiki_HA", "CentralPark_NY", "Waterhole_WA"))) %>% 
   lm(tmax ~ name, data = .)
 
+## change the reference level will change the intercept and coefficient of each indicator var.
+
 ```
 
 
@@ -203,18 +225,7 @@ weather_df %>%
 ```
 
 
-```{r}
-data("nyc_airbnb")
-nyc_airbnb %>%
-  filter(neighbourhood_group == "Manhattan") %>% 
-  mutate(
-    neighbourhood = fct_reorder(neighbourhood, price, na.rm = TRUE)) %>% 
-  ggplot(aes(x = neighbourhood, y = price)) +
-  geom_boxplot() +
-  coord_flip() + 
-  ylim(0, 1000)
 
-```
 
 
 
